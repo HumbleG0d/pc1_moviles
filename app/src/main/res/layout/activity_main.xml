@@ -61,5 +61,25 @@
         app:layout_constraintTop_toBottomOf="@+id/lblmejordistancia"
         app:layout_constraintVertical_bias="0.51" />
 
+    <Button
+        android:id="@+id/btnGuardarRuta"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Guardar Ruta"
+        app:layout_constraintTop_toBottomOf="@id/btnaccion"
+        app:layout_constraintStart_toStartOf="@id/btnaccion"
+        app:layout_constraintEnd_toEndOf="@id/btnaccion"
+        android:layout_marginTop="8dp"/>
+
+    <Button
+        android:id="@+id/btnVerRutas"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Ver Rutas"
+        app:layout_constraintTop_toBottomOf="@id/btlimpiar"
+        app:layout_constraintStart_toStartOf="@id/btlimpiar"
+        app:layout_constraintEnd_toEndOf="@id/btlimpiar"
+        android:layout_marginTop="8dp"/>
+
 
 </androidx.constraintlayout.widget.ConstraintLayout>

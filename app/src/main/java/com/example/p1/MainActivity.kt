@@ -7,8 +7,21 @@ import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.graphics.createBitmap
+import android.content.Intent
+import android.graphics.*
+import android.os.Bundle
+import android.view.MotionEvent
+import android.widget.EditText
+import android.widget.Toast
+import androidx.activity.enableEdgeToEdge
+import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.graphics.createBitmap
 import com.example.p1.TSP.TSPSolverModular
 import com.example.p1.databinding.ActivityMainBinding
+import com.example.p1.db.AppDatabase
+import com.example.p1.db.PuntoEntity
+import com.example.p1.db.Ruta
 import com.example.p1.genetico.AlgoritmoGeneticoConfig
 import kotlinx.coroutines.*
 
@@ -17,6 +30,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private val puntos = mutableListOf<Punto>()
     private var rutaOptima = listOf<Int>()
+    private val db by lazy { AppDatabase.getDatabase(this) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -76,6 +90,18 @@ class MainActivity : AppCompatActivity() {
                 limpiarCanvas(canvas)
             }
 
+            binding.btnGuardarRuta.setOnClickListener {
+                if (rutaOptima.isEmpty()) {
+                    Toast.makeText(this, "Primero debe calcular una ruta", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+                mostrarDialogoGuardarRuta()
+            }
+
+            binding.btnVerRutas.setOnClickListener {
+                val intent = Intent(this, RutasGuardadasActivity::class.java)
+                startActivity(intent)
+            }
         }
     }
 
@@ -344,5 +370,50 @@ class MainActivity : AppCompatActivity() {
         canvas.drawColor(Color.WHITE)
         binding.imageView.invalidate()
         binding.lblmejordistancia.text = "Toca puntos en la pantalla para crear la ruta"
+    }
+
+    private fun mostrarDialogoGuardarRuta() {
+        val builder = AlertDialog.Builder(this)
+        builder.setTitle("Guardar Ruta")
+
+        val input = EditText(this)
+        input.hint = "Nombre de la ruta"
+        builder.setView(input)
+
+        builder.setPositiveButton("Guardar") { dialog, _ ->
+            val nombreRuta = input.text.toString()
+            if (nombreRuta.isNotEmpty()) {
+                guardarRutaEnDB(nombreRuta)
+                dialog.dismiss()
+            } else {
+                Toast.makeText(this, "El nombre no puede estar vacío", Toast.LENGTH_SHORT).show()
+            }
+        }
+        builder.setNegativeButton("Cancelar") { dialog, _ -> dialog.cancel() }
+
+        builder.show()
+    }
+
+    private fun guardarRutaEnDB(nombreRuta: String) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val nuevaRuta = Ruta(nombre = nombreRuta)
+                val rutaId = db.rutaDao().insertRuta(nuevaRuta).toInt()
+
+                val puntosEntidad = rutaOptima.map { index ->
+                    val punto = puntos[index]
+                    PuntoEntity(rutaId = rutaId, x = punto.x, y = punto.y)
+                }
+                db.rutaDao().insertPuntos(puntosEntidad)
+
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@MainActivity, "Ruta guardada exitosamente", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@MainActivity, "Error al guardar la ruta: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
     }
 }
