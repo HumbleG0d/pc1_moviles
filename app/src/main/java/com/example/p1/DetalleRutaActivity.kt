@@ -4,9 +4,9 @@ import android.graphics.*
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.graphics.createBitmap
+import com.example.p1.data.DatabaseHelper
 import com.example.p1.databinding.ActivityDetalleRutaBinding
-import com.example.p1.db.AppDatabase
-import com.example.p1.db.PuntoEntity
+import com.example.p1.model.RutaConPuntos
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -15,32 +15,31 @@ import kotlinx.coroutines.withContext
 class DetalleRutaActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityDetalleRutaBinding
-    private val db by lazy { AppDatabase.getDatabase(this) }
+    private val db by lazy { DatabaseHelper(this) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityDetalleRutaBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        val rutaId = intent.getIntExtra("ruta_id", -1)
-        if (rutaId != -1) {
+        val rutaId = intent.getLongExtra("ruta_id", -1L)
+        if (rutaId != -1L) {
             loadAndDrawRuta(rutaId)
         }
     }
 
-    private fun loadAndDrawRuta(rutaId: Int) {
+    private fun loadAndDrawRuta(rutaId: Long) {
         CoroutineScope(Dispatchers.IO).launch {
-            val rutaConPuntos = db.rutaDao().getRutaConPuntosById(rutaId)
+            val rutaConPuntos = db.getRutaConPuntosById(rutaId)
             withContext(Dispatchers.Main) {
                 rutaConPuntos?.let {
-                    val puntos = it.puntos.map { puntoEntity -> Punto(puntoEntity.x, puntoEntity.y) }
-                    drawRuta(puntos)
+                    drawRuta(it)
                 }
             }
         }
     }
 
-    private fun drawRuta(puntos: List<Punto>) {
+    private fun drawRuta(rutaConPuntos: RutaConPuntos) {
         binding.imageViewDetalle.post {
             val width = binding.imageViewDetalle.width
             val height = binding.imageViewDetalle.height
@@ -56,13 +55,15 @@ class DetalleRutaActivity : AppCompatActivity() {
                 style = Paint.Style.STROKE
             }
 
-            dibujarRutaCompleta(canvas, paint, puntos)
+            dibujarRutaCompleta(canvas, paint, rutaConPuntos.puntos)
             binding.imageViewDetalle.invalidate()
         }
     }
 
-    private fun dibujarRutaCompleta(canvas: Canvas, paint: Paint, puntos: List<Punto>) {
+    private fun dibujarRutaCompleta(canvas: Canvas, paint: Paint, puntosModel: List<com.example.p1.model.Punto>) {
         canvas.drawColor(Color.WHITE)
+
+        val puntosParaDibujo = puntosModel.map { Punto(it.x, it.y) }
 
         val paintPunto = Paint().apply {
             color = Color.RED
@@ -77,7 +78,7 @@ class DetalleRutaActivity : AppCompatActivity() {
             isFakeBoldText = true
         }
 
-        puntos.forEachIndexed { index, punto ->
+        puntosParaDibujo.forEachIndexed { index, punto ->
             canvas.drawCircle(punto.x.toFloat(), punto.y.toFloat(), 12f, paintPunto)
             canvas.drawText(
                 index.toString(),
@@ -87,16 +88,16 @@ class DetalleRutaActivity : AppCompatActivity() {
             )
         }
 
-        if (puntos.isNotEmpty()) {
+        if (puntosParaDibujo.isNotEmpty()) {
             val paintLinea = Paint(paint).apply {
                 color = Color.BLUE
                 strokeWidth = 3f
                 alpha = 180
             }
 
-            for (i in 0 until puntos.size - 1) {
-                val p1 = puntos[i]
-                val p2 = puntos[i + 1]
+            for (i in 0 until puntosParaDibujo.size - 1) {
+                val p1 = puntosParaDibujo[i]
+                val p2 = puntosParaDibujo[i + 1]
                 canvas.drawLine(
                     p1.x.toFloat(), p1.y.toFloat(),
                     p2.x.toFloat(), p2.y.toFloat(),
@@ -105,8 +106,8 @@ class DetalleRutaActivity : AppCompatActivity() {
                 dibujarFlechaDireccion(canvas, p1, p2, paintLinea)
             }
 
-            dibujarCurvaBezierOptimizada(canvas, puntos)
-            dibujarSegmentosBezier(canvas, puntos)
+            dibujarCurvaBezierOptimizada(canvas, puntosParaDibujo)
+            dibujarSegmentosBezier(canvas, puntosModel)
         }
     }
 
@@ -135,7 +136,7 @@ class DetalleRutaActivity : AppCompatActivity() {
         canvas.drawPath(path, paintBezier)
     }
 
-    private fun dibujarSegmentosBezier(canvas: Canvas, ruta: List<Punto>) {
+    private fun dibujarSegmentosBezier(canvas: Canvas, ruta: List<com.example.p1.model.Punto>) {
         val paintSegmento = Paint().apply {
             color = Color.CYAN
             strokeWidth = 2f
@@ -145,17 +146,19 @@ class DetalleRutaActivity : AppCompatActivity() {
         }
 
         for (i in 0 until ruta.size - 1) {
-            val p1 = ruta[i]
-            val p2 = ruta[i + 1]
+            val p1Model = ruta[i]
+            val p2Model = ruta[i + 1]
 
             val path = Path()
-            path.moveTo(p1.x.toFloat(), p1.y.toFloat())
+            path.moveTo(p1Model.x.toFloat(), p1Model.y.toFloat())
 
-            val controlX = (p1.x + p2.x) / 2f + (p2.y - p1.y) * 0.2f
-            val controlY = (p1.y + p2.y) / 2f - (p2.x - p1.x) * 0.2f
+            val controlX = p1Model.controlX
+            val controlY = p1Model.controlY
 
-            path.quadTo(controlX, controlY, p2.x.toFloat(), p2.y.toFloat())
-            canvas.drawPath(path, paintSegmento)
+            if (controlX != null && controlY != null) {
+                path.quadTo(controlX, controlY, p2Model.x.toFloat(), p2Model.y.toFloat())
+                canvas.drawPath(path, paintSegmento)
+            }
         }
     }
 

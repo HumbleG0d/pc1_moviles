@@ -6,7 +6,7 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.example.p1.R
-import com.example.p1.db.RutaConPuntos
+import com.example.p1.model.RutaConPuntos
 
 class RutaAdapter(
     private val rutas: List<RutaConPuntos>,
