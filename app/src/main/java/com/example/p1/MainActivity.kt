@@ -10,7 +10,7 @@ import android.content.Intent
 import android.widget.EditText
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import com.example.p1.TSP.TSPSolverModular
+import com.example.p1.TSP.TSPGenetico
 import com.example.p1.databinding.ActivityMainBinding
 import com.example.p1.db.AppDatabase
 import com.example.p1.db.PuntoEntity
@@ -52,7 +52,6 @@ class MainActivity : AppCompatActivity() {
                     val y = event.y.toInt()
                     puntos.add(Punto(x, y))
 
-                    // Redibujar todo el canvas
                     redibujarCanvas(canvas, paint)
                     binding.imageView.invalidate()
 
@@ -115,7 +114,7 @@ class MainActivity : AppCompatActivity() {
                 )
 
                 // Ejecutar algoritmo genético modularizado
-                val resultado = TSPSolverModular.resolverTSP(configuracion)
+                val resultado = TSPGenetico.resolverTSP(configuracion)
 
                 // Calcular distancia total y métricas
                 val distanciaTotal = CalculadorDistancia.calcularDistanciaRuta(resultado, puntos)

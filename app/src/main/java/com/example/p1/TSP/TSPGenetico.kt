@@ -4,7 +4,7 @@ import com.example.p1.genetico.AlgoritmoGeneticoConfig
 import kotlin.math.sqrt
 import kotlin.random.Random
 
-object TSPSolverModular {
+object TSPGenetico {
     fun resolverTSP(config: AlgoritmoGeneticoConfig.Configuracion): List<Int> {
         // Convertir coordenadas a puntos
         val puntos = mutableListOf<PuntoTSP>()
